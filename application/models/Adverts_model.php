@@ -5,6 +5,7 @@ class Adverts_model extends CI_Model {
 	public function __construct(){
 		parent::__construct();
 		$this->load->database();
+		$this->table = 'adverts';
 	}
 
 	/*public function show_adverts($sort = "id_advert", $order = "desc") {
@@ -15,22 +16,22 @@ class Adverts_model extends CI_Model {
 		return $this->db->get()->result_array();
 	}*/
 
-	public function show_adverts($sort = "id_advert", $order = "desc", $limit = NULL, $offset = NULL, $city = NULL) {
+	/*public function show_adverts($sort = "id_advert", $order = "desc", $limit = NULL, $offset = NULL) {
 
 		if ($limit){
 			$this->db->limit($limit, $offset);
 		}
 
-		if ($city){
+		/*if ($city){
 			$this->db->where("city", $city);
-		}
+		}*/
 
-		$this->db->from("adverts");
+		/*$this->db->from("adverts");
 		$this->db->where("advert_status", 1);
 		$this->db->where("advert_delete", 1);
 		$this->db->order_by($sort, $order);
 		return $this->db->get()->result_array();
-	}
+	}*/
 
 	public function get_data($id, $select = NULL){
 		if(!empty($select)){
@@ -41,7 +42,118 @@ class Adverts_model extends CI_Model {
 		return $this->db->get();
 	}
 
-	public function countAll($city = NULL) {
+	public function get_cities($state){
+		$this->db->select("city");
+		$this->db->distinct();
+		$this->db->from("adverts");
+		$this->db->where("state", $state);
+		return $this->db->get();
+	}
+
+	/*public function getRows($params = array()) {
+		$this->db->select('*');
+		$this->db->from($this->table);
+		$this->db->where("advert_status", 1);
+
+        if(array_key_exists("where", $params)){ 
+            foreach($params['where'] as $key => $val){ 
+                $this->db->where($key, $val); 
+            } 
+        } 
+         
+        if(array_key_exists("search", $params)){ 
+            // Filter data by searched keywords 
+            if(!empty($params['search']['keywords'])){ 
+                $this->db->like('advert_title', $params['search']['keywords']); 
+            } 
+        } 
+         
+        // Sort data by ascending or desceding order 
+        if(!empty($params['search']['sortBy'])){ 
+            $this->db->order_by('advert_title', $params['search']['sortBy']); 
+        }else{ 
+            $this->db->order_by('id_advert', 'desc'); 
+        } 
+         
+        if(array_key_exists("returnType",$params) && $params['returnType'] == 'count'){ 
+            $result = $this->db->count_all_results(); 
+        }else{ 
+            if(array_key_exists("id_advert", $params) || (array_key_exists("returnType", $params) && $params['returnType'] == 'single')){ 
+                if(!empty($params['id_advert'])){ 
+                    $this->db->where('id_advert', $params['id_advert']); 
+                } 
+                $query = $this->db->get(); 
+                $result = $query->row_array(); 
+            }else{ 
+                $this->db->order_by('id_advert', 'desc'); 
+                if(array_key_exists("start",$params) && array_key_exists("limit",$params)){ 
+                    $this->db->limit($params['limit'],$params['start']); 
+                }elseif(!array_key_exists("start",$params) && array_key_exists("limit",$params)){ 
+                    $this->db->limit($params['limit']); 
+                } 
+                 
+                $query = $this->db->get(); 
+                $result = ($query->num_rows() > 0)?$query->result_array():FALSE; 
+            } 
+        } 
+         
+        // Return fetched data 
+        return $result; 
+    }*/
+
+    public function getRows($params = array()) {
+		$this->db->select('*');
+		$this->db->from($this->table);
+		$this->db->where("advert_status", 1);
+		$this->db->where("advert_delete", 1);
+         
+        if(array_key_exists("where", $params)){ 
+            foreach($params['where'] as $key => $val){ 
+                $this->db->where($key, $val); 
+            } 
+        }
+
+        if(array_key_exists("search", $params)){ 
+            // Filter data by searched keywords 
+            if(!empty($params['search']['keywords'])){ 
+                $this->db->like('advert_title', $params['search']['keywords']); 
+            } 
+        } 
+         
+        // Sort data by ascending or desceding order 
+        if(!empty($params['search']['sortBy'])){ 
+            $this->db->order_by('id_advert', $params['search']['sortBy']); 
+        }else{ 
+            $this->db->order_by('id_advert', 'desc'); 
+        } 
+         
+        if(array_key_exists("returnType",$params) && $params['returnType'] == 'count'){ 
+            $result = $this->db->count_all_results(); 
+        }else{ 
+            if(array_key_exists("id_advert", $params) || (array_key_exists("returnType", $params) && $params['returnType'] == 'single')){ 
+                if(!empty($params['id_advert'])){ 
+                    $this->db->where('id_advert', $params['id_advert']); 
+                } 
+                $query = $this->db->get(); 
+                $result = $query->row_array(); 
+            }else{ 
+                $this->db->order_by('id_advert', 'desc'); 
+                if(array_key_exists("start",$params) && array_key_exists("limit",$params)){ 
+                    $this->db->limit($params['limit'],$params['start']); 
+                }elseif(!array_key_exists("start",$params) && array_key_exists("limit",$params)){ 
+                    $this->db->limit($params['limit']); 
+                } 
+                 
+                $query = $this->db->get(); 
+                $result = ($query->num_rows() > 0)?$query->result_array():FALSE; 
+            } 
+        } 
+         
+        // Return fetched data 
+        return $result; 
+    }
+
+	/*public function countAll($city = NULL) {
 		if ($city){
 			$this->db->where("city", $city);
 		}
@@ -51,7 +163,7 @@ class Adverts_model extends CI_Model {
 		$this->db->where("advert_delete", 1);
 		return $this->db->get()->num_rows();
 
-	}
+	}*/
 
 	public function insert($data){
 		$this->db->insert("adverts", $data);
@@ -68,6 +180,14 @@ class Adverts_model extends CI_Model {
 		$this->db->update("adverts");
 	}
 
+	public function update_delete_ban($id){
+		$this->db->where("id_user_fk", $id);
+		$this->db->set("advert_delete", 0);
+		$this->db->update("adverts");
+	}
+
+	
+
 	public function update_approve($id){
 		$this->db->where("id_advert", $id);
 		$this->db->set("advert_status", 1);
@@ -79,12 +199,6 @@ class Adverts_model extends CI_Model {
 		$this->db->set("advert_delete", 1);
 		$this->db->update("adverts");
 	}
-
-	public function console_log( $data ){
-		  echo '<script>';
-		  echo 'console.log('. json_encode( $data ) .')';
-		  echo '</script>';
-		}
 
 	public function update_advert_count($id){
 		$data = $this->get_data($id, "advert_count")->result_array()[0];
@@ -119,7 +233,7 @@ class Adverts_model extends CI_Model {
 	*/
 
 	var $column_search = array("advert_title", "advert_description");
-	var $column_order = array("advert_title", "state", "advert_datetime");
+	var $column_order = array("advert_title", "advert_img", "state", "advert_datetime", "advert_count", "id_user_fk");
 
 	//Datatable dos anúncios ativos
 	private function _get_datatable($id) {
