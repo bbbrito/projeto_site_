@@ -18,14 +18,15 @@
 	<meta property="og:url" content=""/>
 	<meta property="og:site_name" content=""/>
 	<meta property="og:description" content=""/>
-	<meta name="twitter:title" content="" />
+	<!--<meta name="twitter:title" content="" />
 	<meta name="twitter:image" content="" />
 	<meta name="twitter:url" content="" />
-	<meta name="twitter:card" content="" />
+	<meta name="twitter:card" content="" />  -->
 
 	<!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
-	<!--<link rel="shortcut icon" href="favicon.ico"> -->
+	<link rel="shortcut icon" href="favicon.ico">
 
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,300,600,400italic,700' rel='stylesheet' type='text/css'>
 
 	<!-- Animate.css -->
@@ -48,11 +49,7 @@
 	<!-- Modernizr JS -->
 	<script src="<?php echo base_url(); ?>public/js/modernizr-2.6.2.min.js"></script>
 	<!-- FOR IE9 below -->
-	<!--[if lt IE 9]>
-	<script src="js/respond.min.js"></script>
-	<![endif]-->
-
-
+	
 	<?php if (isset($styles)) {
 		foreach ($styles as $style_name){
 			$href = base_url() . "public/css/" . $style_name; ?>
