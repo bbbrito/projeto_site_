@@ -7,11 +7,11 @@ class Users_model extends CI_Model {
 		$this->load->database();
 	}
 
-	public function get_user_data($user_login) {
+	public function get_user_data($email) {
 		$this->db
-			->select("id_user, login_user, password_hash, email_user")
+			->select("id_user, login_user, password_hash, email_user, status")
 			->from("users")
-			->where("login_user", $user_login);
+			->where("email_user", $email);
 
 		$result = $this->db->get();
 
@@ -31,8 +31,50 @@ class Users_model extends CI_Model {
 		return $this->db->get();
 	}
 
-	public function insert($data){
-		$this->db->insert("users", $data);
+	public function get_login_data($email) {
+		$this->db->select("login_user");
+		$this->db->from("users");
+		$this->db->where("email_user", $email);		
+		return $this->db->get();
+	}
+
+	public function confirmation_cad($email, $token){
+		$this->db->select("*");
+		$this->db->from("confirmation");
+		$this->db->where("email_user", $email);
+		$this->db->where("token", $token);
+		$count = $this->db->get()->num_rows();
+
+		if ($count > 0) {
+			$this->db->from("confirmation");
+			$this->db->where("email_user", $email);
+			$this->db->delete("confirmation");
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	public function expire_link($email, $date){	
+		$this->db->from("confirmation");
+		$this->db->where("email_user", $email);
+		$this->db->where("expire_date <", $date);
+		if ($this->db->get()->num_rows() > 0) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	public function active_cad($email){
+		$this->db->from("users");
+		$this->db->where("email_user", $email);
+		$this->db->set("status", 1);
+		$this->db->update("users");
+	}
+
+	public function insert($table, $data){
+		$this->db->insert($table, $data);
 	}
 
 	public function update($id, $data){
@@ -40,9 +82,29 @@ class Users_model extends CI_Model {
 		$this->db->update("users", $data);
 	}
 
-	public function delete($id){
+	public function update_password($email, $data){
+		$this->db->from("users");
+		$this->db->where("email_user", $email);
+		$this->db->set("password_hash", $data);
+		$this->db->update("users");
+	}
+
+	public function delete($id, $status){
 		$this->db->where("id_user", $id);
-		$this->db->delete("users");
+		switch ($status) {
+		  case 0:
+			$this->db->delete("users");
+		    break;
+		  case 1:
+			$this->db->set("status", "2");
+			$this->db->update("users");
+		    break;
+		  case 2:
+			$this->db->delete("users");
+		    break;
+		  default:
+		    return false;
+		}
 	}
 
 	public function is_duplicated($field, $value, $id = NULL){
@@ -55,7 +117,7 @@ class Users_model extends CI_Model {
 	}
 
 	var $column_search = array("login_user", "email_user", "register_date");
-	var $column_order = array("login_user", "register_date");
+	var $column_order = array("login_user", "email_user", "register_date", "status");
 
 	private function _get_datatable() {
 
