@@ -18,10 +18,10 @@
 	<meta property="og:url" content=""/>
 	<meta property="og:site_name" content=""/>
 	<meta property="og:description" content=""/>
-	<meta name="twitter:title" content="" />
+	<!-- <meta name="twitter:title" content="" />
 	<meta name="twitter:image" content="" />
 	<meta name="twitter:url" content="" />
-	<meta name="twitter:card" content="" />
+	<meta name="twitter:card" content="" /> -->
 
 	<!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
 	<!--<link rel="shortcut icon" href="favicon.ico"> -->
@@ -65,69 +65,88 @@
 	<header role="banner" id="faqui-header">
 			<div class="container">
 				<!-- <div class="row"> -->
-			    <nav class="navbar navbar-default">
+			<nav class="navbar navbar-default">
 		        <div class="navbar-header">
 		        	<!-- Mobile Toggle Menu Button -->
 					<a href="#" class="js-faqui-nav-toggle faqui-nav-toggle" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar"><i></i></a>
 		          	<a class="navbar-brand" href="<?php echo base_url(); ?>home">Frete Aqui</a> 
 		        </div>
+			<?php 
+      		if (!$this->session->userdata("id_user")) { ?>
 		        <div id="navbar" class="navbar-collapse collapse">
 		          <ul class="nav navbar-nav navbar-right">
-		            <li class="active"><a href="<?php echo base_url(); ?>home"><span>Anúncios</span></a></li>
+		            <li><a href="<?php echo base_url(); ?>home"><span>Anúncios</span></a></li>
 		            <li><a href="<?php echo base_url(); ?>initial"><span>Página Inicial</span></a></li>
-		            <li><a href="<?php echo base_url(); ?>initial/#about" data-nav-section="about"><span>Sobre</span></a></li>
-		            <li><a href="<?php echo base_url(); ?>#services" data-nav-section="services"><span>Quero Fretar</span></a></li>
-		            <li><a href="<?php echo base_url(); ?>#features" data-nav-section="features"><span>Quero Anunciar</span></a></li>
-		            <!---<li><a href="<?php echo base_url(); ?>#testimonials" data-nav-section="testimonials"><span>Depoimentos</span></a></li>-->
-		            <!---<li><a href="<?php echo base_url(); ?>#pricing" data-nav-section="pricing"><span>Preços</span></a></li>-->
-		            <li><a href="<?php echo base_url(); ?>restrict"><span>Login</span></a></li>
-		            <li><a href="<?php echo base_url(); ?>restrict"><span>Anuncie Grátis</span></a></li>
-		          </ul>
-		        </div>
-			    </nav>
+			        <li><a href="<?php echo base_url(); ?>initial/#about" data-nav-section="about"><span>Sobre</span></a></li>
+			        <li><a href="<?php echo base_url(); ?>#services" data-nav-section="services"><span>Quero Fretar</span></a></li>
+			        <li><a href="<?php echo base_url(); ?>#features" data-nav-section="features"><span>Quero Anunciar</span></a></li>
+			        <!---<li><a href="<?php //echo base_url(); ?>#testimonials" data-nav-section="testimonials"><span>Depoimentos</span></a></li>-->
+			        <!---<li><a href="<?php //echo base_url(); ?>#pricing" data-nav-section="pricing"><span>Preços</span></a></li>-->
+			        <li><a href="<?php echo base_url(); ?>restrict"><span>Login</span></a></li>
+			        <li><a href="<?php echo base_url(); ?>restrict"><span>Anuncie Grátis</span></a></li>
+			      </ul>
+			    </div>
+		        <?php } else { ?>
+					<div id="navbar" class="navbar-collapse collapse">
+			          <ul class="nav navbar-nav navbar-right">
+			            <li class="active"><a href="<?php echo base_url(); ?>home"><span>Anúncios</span></a></li>
+			            <li><a href="<?php echo base_url(); ?>initial"><span>Página Inicial</span></a></li>
+			            <li><a href="<?php echo base_url(); ?>initial/#about" data-nav-section="about"><span>Sobre</span></a></li>
+			            <li><a href="<?php echo base_url(); ?>#services" data-nav-section="services"><span>Quero Fretar</span></a></li>
+			            <li><a href="<?php echo base_url(); ?>#features" data-nav-section="features"><span>Quero Anunciar</span></a></li>
+			            <!---<li><a href="<?php //echo base_url(); ?>#testimonials" data-nav-section="testimonials"><span>Depoimentos</span></a></li>-->
+			            <!---<li><a href="<?php //echo base_url(); ?>#pricing" data-nav-section="pricing"><span>Preços</span></a></li>-->
+			            <li><a href="<?php echo base_url(); ?>restrict"><span>Anuncie Grátis</span></a></li>
+
+					    <?php
+					      $user = $_SESSION['username'];
+					    ?>
+
+					    <li><a href="<?php echo base_url(); ?>restrict"><i class="icon-user"><?=$user?></i></a></li>
+					    <li><a class="item login square-button" href="restrict/logoff"><i class="icon-sign-out" data-toggle="tooltip" data-placement="auto top" title="Sair"></i></a></li>					      
+			          </ul>
+
+			        </div>
+			   <?php } ?>
+			   </nav>
 			  <!-- </div> -->
 			</div>
 	</header>
 	
 	<div id="slider" data-section="nome">
 		<div class="owl-carousel owl-carousel-fullwidth">
-			<!-- You may change the background color here. -->
-		    <div class="item" style="background: #352f44;">
+			<!-- You may change the background color here. #352f44 -->
+		    <!--<div class="item" style="background: #000000;"> -->
+		    <div class="item" style="background-image:url(public/images/slide_3.jpg)">
 		    	<div class="container" style="position: relative;">
 		    		<div class="row">
-					    <div class="col-md-7 col-sm-7">
+					    <div class="col-md-8 col-md-offset-2 text-center">
 			    			<div class="faqui-owl-text-wrap">
 						    	<div class="faqui-owl-text">
-						    		<h1 class="faqui-lead to-animate">Ônibus, Micro-ônibus, Caminhões, Camionetes e Motos</h1>
-									<h2 class="faqui-sub-lead to-animate">Com apenas alguns cliques, encontre seu veículo para fretes/carretos de escola, igreja, praia, balneário, funeral, city tour, retiro espiritual, mudança, entrega etc. no  <a href="<?php echo base_url(); ?>home" target="_blank">Frete Aqui</a></h3>
+						    		<h1 class="faqui-lead to-animate">Ônibus, Micro-ônibus, Caminhões, Caminhonetes, Motos e muito mais</h1>
+									<h2 class="faqui-sub-lead to-animate">Com apenas alguns cliques, encontre seu veículo para fretes/carretos de escola, igreja, praia, balneário, funeral, city tour, retiro espiritual, mudança, entrega etc. no  <a href="<?php echo base_url(); ?>home">Frete Aqui</a></h3>
 									<p class="to-animate-2"><a href="<?php echo base_url(); ?>home" class="btn btn-primary btn-lg">Ver anúncios</a></p>
 						    	</div>
 						    </div>
-					    </div>
-					    <div class="col-md-4 col-md-push-1 col-sm-4 col-sm-push-1 iphone-image">
-					    	<div class="iphone to-animate-2"><img src="<?php echo base_url(); ?>public/images/iphone-2.png" alt="Como Anunciar"></div>
 					    </div>
 
 		    		</div>
 		    	</div>
 		    </div>
 			<!-- You may change the background color here.  -->
-		    <div class="item" style="background: #38569f;">
+		    <!--<div class="item" style="background: #38569f;"> -->
+		    <div class="item" style="background-image:url(public/images/slide_4.jpg)">
 		    	<div class="container" style="position: relative;">
 		    		<div class="row">
-		    			<div class="col-md-7 col-md-push-1 col-md-push-5 col-sm-7 col-sm-push-1 col-sm-push-5">
+		    			<div class="col-md-8 col-md-offset-2 text-center">
 			    			<div class="faqui-owl-text-wrap">
 						    	<div class="faqui-owl-text">
 						    		<h1 class="faqui-lead to-animate">Praticidade</h1>
-									<h2 class="faqui-sub-lead to-animate">Você recebe uma lista de veículos disponíveis para frete/carreto e escolhe a melhor oferta para você, negociando direto com a empresa, transportadora, agenciador ou proprietário do veículo no <a href="<?php echo base_url(); ?>home" target="_blank">Frete Aqui</a></h3>
+									<h2 class="faqui-sub-lead to-animate">Você recebe uma lista de veículos disponíveis para frete/carreto e escolhe a melhor oferta para você, negociando direto com a empresa, transportadora, agenciador ou proprietário do veículo no <a href="<?php echo base_url(); ?>home">Frete Aqui</a></h3>
 									<p class="to-animate-2"><a href="<?php echo base_url(); ?>home" class="btn btn-primary btn-lg">Ver anúncios</a></p>
 						    	</div>
 						    </div>
 					    </div>
-					    <div class="col-md-4 col-md-pull-7 col-sm-4 col-sm-pull-7 iphone-image">
-					    	<div class="iphone to-animate-2"><img src="<?php echo base_url(); ?>public/images/iphone-1.png" alt="Site Frete Aqui para fretes e carretos"></div>
-					    </div>
-
 		    		</div>
 		    	</div>
 		    </div>
@@ -140,8 +159,8 @@
 		    				<div class="faqui-owl-text-wrap">
 						    	<div class="faqui-owl-text">
 		    						<h1 class="faqui-lead to-animate">Anuncie agora 100% grátis!</h1>
-									<h2 class="faqui-sub-lead to-animate">Aumente seu faturamento com carretos, fretes, mudanças, entregas, viagens e turismo. Anuncie seu veículo no  <a href="http://freehtml5.co/" target="_blank">Frete Aqui</a></h3>
-									<p class="to-animate-2"><a href="<?php echo base_url(); ?>restrict" target="_blank" class="btn btn-primary btn-lg">Anuncie Grátis</a></p>
+									<h2 class="faqui-sub-lead to-animate">Aumente seu faturamento com carretos, fretes, mudanças, entregas, viagens e turismo. Anuncie seu veículo no  <a href="<?php echo base_url(); ?>restrict">Frete Aqui</a></h3>
+									<p class="to-animate-2"><a href="<?php echo base_url(); ?>restrict"class="btn btn-primary btn-lg">Anuncie Grátis</a></p>
 								</div>
 							</div>
 		    			</div>
@@ -181,7 +200,7 @@
 					<div class="row row-bottom-padded-lg">
 						<div class="col-md-4 text-center to-animate">
 							<div class="person">
-								<img src="<?php echo base_url(); ?>public/images/person2.jpg" class="img-responsive img-rounded" alt="Person">
+								<img src="<?php //echo base_url(); ?>public/images/person2.jpg" class="img-responsive img-rounded" alt="Person">
 								<h3 class="name">John Doe</h3>
 								<div class="position">Web Developer</div>
 								<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia, there live the blind texts. Separated they live in Bookmarksgrove right at the coast of the Semantics.</p>
@@ -195,7 +214,7 @@
 						</div>
 						<div class="col-md-4 text-center to-animate">
 							<div class="person">
-								<img src="<?php echo base_url(); ?>public/images/person3.jpg" class="img-responsive img-rounded" alt="Person">
+								<img src="<?php //echo base_url(); ?>public/images/person3.jpg" class="img-responsive img-rounded" alt="Person">
 								<h3 class="name">Rob Smith</h3>
 								<div class="position">Web Designer</div>
 								<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia, there live the blind texts. Separated they live in Bookmarksgrove right at the coast of the Semantics.</p>
@@ -209,7 +228,7 @@
 						</div>
 						<div class="col-md-4 text-center to-animate">
 							<div class="person">
-								<img src="<?php echo base_url(); ?>public/images/person4.jpg" class="img-responsive img-rounded" alt="Person">
+								<img src="<?php //echo base_url(); ?>public/images/person4.jpg" class="img-responsive img-rounded" alt="Person">
 								<h3 class="name">John Doe</h3>
 								<div class="position">Photographer</div>
 								<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia, there live the blind texts. Separated they live in Bookmarksgrove right at the coast of the Semantics.</p>
@@ -345,7 +364,7 @@
 			</div>
 			<div class="row">
 				<div class="col-md-4 col-md-offset-4 single-animate animate-features-3">
-					<a href="<?php echo base_url(); ?>restrict" class="btn btn-primary btn-block">Anunciar</a>
+					<a href="<?php echo base_url();?>restrict" class="btn btn-primary btn-block">Anunciar</a>
 				</div>
 			</div>
 		</div>
