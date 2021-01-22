@@ -45,7 +45,7 @@ class Restrict extends CI_Controller{
 
 	public function logoff() {
 		$this->session->sess_destroy();
-		header("Location: " . base_url() . "restrict");
+		header("Location: " . base_url() . "home");
 	}
 	
 	public function ajax_login() {
@@ -58,27 +58,52 @@ class Restrict extends CI_Controller{
 		$json["status"] = 1;
 		$json["error_list"] = array();
 
-		$username = $this->input->post("username");
+		$email = $this->input->post("email");
 		$password = $this->input->post("password");
 
-		if (empty($username)) {
+		if (empty($email)) {
 			$json["status"] = 0;
-			$json["error_list"]["#username"] = "Usuário não pode ser vazio!";
+			$json["error_list"]["#email"] = "E-mail não pode ser vazio!";
 		} else {
 			$this->load->model("users_model");
-			$result = $this->users_model->get_user_data($username);
+			$result = $this->users_model->get_user_data($email);
+
 			if ($result) {
 				$id_user = $result->id_user;
 				$password_hash = $result->password_hash;
 				if (password_verify($password, $password_hash)) {
-					$this->session->set_userdata("id_user", $id_user);
+					if ($result->status == 0) {
+						$json["status"] = 0;
+						$json["error_list"]["#btn_login"] = "Ative seu cadastro pelo link enviado por e-mail!";
+					} else {
+						$recaptchaResponse = trim($this->input->post('g-recaptcha-response'));
+						$userIp=$this->input->ip_address();    
+		    			$secret = $this->config->item('SECRET_KEY');
+					    $url="https://www.google.com/recaptcha/api/siteverify?secret=".$secret."&response=".$recaptchaResponse."&remoteip=".$userIp;
+
+					    $ch = curl_init();
+					    curl_setopt($ch, CURLOPT_URL, $url); 
+				        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+				        $output = curl_exec($ch); 
+				        curl_close($ch);      
+				         
+				        $status= json_decode($output, true);
+				        if ($status['success']) {
+				        	$this->session->set_userdata("id_user", $id_user);
+							$this->session->set_userdata("username", $result->login_user);
+				        } else {
+				        	$json["status"] = 0;
+				        	$json["error_list"]["#btn_login"] = "Captcha inválido! Atualize a página e tente novamente.";
+				        }
+
+						
+					}
 				} else {
 					$json["status"] = 0;
+					$json["error_list"]["#btn_login"] = "Usuário e/ou senha incorretos!";
 				}
 			} else {
 				$json["status"] = 0;
-			}
-			if ($json["status"] == 0) {
 				$json["error_list"]["#btn_login"] = "Usuário e/ou senha incorretos!";
 			}
 		}
@@ -86,6 +111,35 @@ class Restrict extends CI_Controller{
 		echo json_encode($json);
 
 	}
+
+		/**
+     * Recebe o CEP via post e retorna os dados
+     * consultados via JSON
+     */
+    public function consulta(){
+
+    	$json = array();
+		$json["status"] = 1;
+		//$json["error_list"] = "";
+		$json["zip_code"] = array();
+    
+        $cep = $this->input->post('cep');
+        
+        $this->load->library('curl');
+        $data = $this->curl->consulta($cep);
+        $obj = json_decode($data);
+
+        if (isset($obj->erro)) {
+        	$json["status"] = 0;
+			$json["error_list"] = "CEP inválido!";
+		} else {
+			$json["zip_code"]["cidade"] = $obj->localidade;
+			
+			$json["zip_code"]["uf"] = $obj->uf; 
+		}
+		echo json_encode($json);
+        
+    }
 
 
 	public function ajax_import_image() {
@@ -99,7 +153,7 @@ class Restrict extends CI_Controller{
 
 			$json = array();
 			$json["status"] = 1;
-			$json["img_view"] = '';
+			//$json["img_view"] = '';
 			$count_files = [];
 			$count_files = $_FILES["files"]["name"];
 			
@@ -127,9 +181,7 @@ class Restrict extends CI_Controller{
 					} else {
 						$data = $this->upload->data();
 						$json["img_path"][$i] = base_url() . "tmp/" . $data["file_name"];
-						$json["img_view"] .= '<li><img src=" '.base_url() . 'tmp/' . $data["file_name"].'" class="img-responsive img-thumbnail" style="max-width: 100px; max-height: 100px;" /></li>';
-						
-						
+						/*$json["img_view"] .= '<li><img src=" '.base_url() . 'tmp/' . $data["file_name"].'" class="img-responsive img-thumbnail" class="remove" style="max-width: 100px; max-height: 100px;" /><i class="icon-delete"></i></li>';*/				
 					}
 				}//end for
 			}//end else
@@ -192,6 +244,9 @@ class Restrict extends CI_Controller{
 			if ($this->adverts_model->is_duplicated("advert_title", $data["advert_title"], $data["id_advert"])) {
 				$json["error_list"]["#advert_title"] = "Anúncio já existente!";
 			}
+			if (!preg_match("/([a-zA-Z0-9])/", $data["advert_title"])){
+				$json["error_list"]["#advert_title"] = "O título não deve conter caracteres especiais";
+			}
 		}
 
 		if (empty($data["category"])){
@@ -202,12 +257,16 @@ class Restrict extends CI_Controller{
 			$json["error_list"]["#zip_code"] = "CEP do anúncio é obrigatório!";
 		}
 
+		if (empty($data["city"])){
+			$json["error_list"]["#city"] = "Cidade do anúncio é obrigatória!";
+		}
+
 		if (empty($data["state"])){
 			$json["error_list"]["#state"] = "Estado do anúncio é obrigatório!";
 		}
 
-		if (empty($data["city"])){
-			$json["error_list"]["#city"] = "Cidade do anúncio é obrigatória!";
+		if (empty($data["phone"])){
+			$json["error_list"]["#phone"] = "O telefone para contato é obrigatório!";
 		}
 
 		if (empty($data["advert_description"])){
@@ -260,24 +319,34 @@ class Restrict extends CI_Controller{
 
 				$this->adverts_model->update($id_advert, $data);
 			}
+			
+			
 		}
 		echo json_encode($json);
+		
 	}
 
-	public function ajax_approve_advert_data() {
+	public function send_new_advert_email() {
+		$this->load->library('email');
+		$this->load->model("users_model");
 
-		if (!$this->input->is_ajax_request()) {
-			exit("Nenhum acesso de script direto permitido!");
-		}
+		$id_user = $this->session->userdata("id_user");
+		$data = $this->users_model->get_data($id_user)->result_array()[0];
+		$to = $data["email_user"];
+		$from = $this->config->item('EMAIL_COMPANY');
+		      
+        $this->email->set_mailtype("html");
+		$this->email->from($from);
+		$this->email->subject("Seu anúncio estará ativo em breve!");
+		$this->email->to($to);
+		$this->email->message("Obrigado por usar o Frete Aqui!<br>
+Seu anúncio estará ativo em breve.<br>
+Acompanhe o status do seu anúncio fazendo <a href= ".base_url() . "restrict>login!</a><br><br>
+Para garantir recebimento dos nossos e-mails, adicione noreply@freteaqui.com aos seus contatos.<br>
+Se você encontrar dificuldades contate o administrador: contato@freteaqui.com");
+		$this->email->send();
+		//$this->email->print_debugger();
 
-		$json = array();
-		$json["status"] = 1;
-
-		$this->load->model("adverts_model");
-		$id_advert = $this->input->post("id_advert");
-		$this->adverts_model->update_approve($id_advert);
-
-		echo json_encode($json);
 	}
 
 	public function ajax_save_user() {
@@ -289,6 +358,7 @@ class Restrict extends CI_Controller{
 		$json = array();
 		$json["status"] = 1;
 		$json["error_list"] = array();
+		$json["confirmation"] = array();
 
 		$this->load->model("users_model");
 
@@ -311,6 +381,8 @@ class Restrict extends CI_Controller{
 				if ($data["email_user"] != $data["email_user_confirm"]) {
 					$json["error_list"]["#email_user"] = "";
 					$json["error_list"]["#email_user_confirm"] = "E-mails não conferem!";
+				} else {
+					$json["confirmation"]["email_user"] = $data["email_user"];
 				}
 			}
 		}
@@ -321,6 +393,23 @@ class Restrict extends CI_Controller{
 			if ($data["password_user"] != $data["password_user_confirm"]) {
 				$json["error_list"]["#password_user"] = "";
 				$json["error_list"]["#password_user_confirm"] = "Senhas não conferem!";
+			} else {
+				$recaptchaResponse = trim($this->input->post('g-recaptcha-response'));
+				unset($data["g-recaptcha-response"]);
+				$userIp=$this->input->ip_address();    
+    			$secret = $this->config->item('SECRET_KEY');
+			    $url="https://www.google.com/recaptcha/api/siteverify?secret=".$secret."&response=".$recaptchaResponse."&remoteip=".$userIp;
+
+			    $ch = curl_init();
+			    curl_setopt($ch, CURLOPT_URL, $url); 
+		        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+		        $output = curl_exec($ch); 
+		        curl_close($ch);      
+		         
+		        $status= json_decode($output, true);
+		        if (!$status['success']) {
+        			$json["error_list"]["#btn_save_user"] = "Captcha inválido! Atualize a página e tente novamente.";
+		        }
 			}
 		}
 
@@ -335,10 +424,13 @@ class Restrict extends CI_Controller{
 			unset($data["email_user_confirm"]);
 
 			if(empty($data["id_user"])){
-				$timezone = new DateTimeZone('America/Sao_Paulo');
-				$date = new DateTime('now', $timezone);
-				$data["register_date"] = $date->format("Y-m-d");
-				$this->users_model->insert($data);
+				date_default_timezone_set('America/Sao_Paulo');
+				$data["register_date"] = date('Y-m-d H:i:s');
+				$data["status"] = 0; //0 = em confirmação, 1 = confirmado
+				$this->users_model->insert("users", $data);
+				$json["confirmation"]["expire_date"] = date('Y-m-d H:i:s', strtotime('+1 day'));
+				$json["confirmation"]["token"] = bin2hex(random_bytes(64));
+				$this->users_model->insert("confirmation", $json["confirmation"]);
 			} else{
 				$id_user = $data["id_user"];
 				unset($data["id_user"]);
@@ -346,6 +438,190 @@ class Restrict extends CI_Controller{
 			}
 		}
 		echo json_encode($json);
+	}
+
+	public function send_new_user_email() {
+		$this->load->library('email');
+		$this->load->model("users_model");
+
+		$to = $this->input->post("email");
+		$token = $this->input->post("token");
+		$data = $this->users_model->get_login_data($to)->result_array()[0];
+		$user = $data["login_user"];
+		$from = $this->config->item('EMAIL_COMPANY');
+		      
+        $this->email->set_mailtype("html");
+		$this->email->from($from);
+		$this->email->subject("Confirmação de cadastro!");
+		$this->email->to($to);
+		$this->email->message("<strong>Cadastro no site Frete Aqui</strong><br>
+Olá, " . $user. "!<br>Obrigado por se cadastrar no Frete Aqui!<br>Confirme seu e-mail <a href= ".base_url() . 'restrict/ajax_confirm_user/' . $to. '/' . $token. " >clicando aqui!</a><br><br>
+Para garantir recebimento dos nossos e-mails, adicione noreply@freteaqui.com aos seus contatos.<br>
+Se você encontrar dificuldades contate o administrador: contato@freteaqui.com");
+
+		$this->email->send();
+		//$this->email->print_debugger();
+
+	}
+
+	//Função criada para confirmar cadastro
+	public function ajax_confirm_user() {
+
+		/*if (!$this->input->is_ajax_request()) {
+			exit("Nenhum acesso de script direto permitido!");
+		}*/
+
+		$this->load->model("users_model");
+
+		$email = $this->uri->segment(3);
+		$token = $this->uri->segment(4);
+		date_default_timezone_set('America/Sao_Paulo');
+		$now_date = date('Y-m-d H:i:s');
+
+		if ($this->users_model->expire_link($email, $now_date) || !$this->users_model->confirmation_cad($email, $token)) {
+			echo "
+			<script>
+			alert('Este link expirou!');
+			window.location.href='".base_url()."restrict';
+			</script>";
+		} else {
+			$this->users_model->active_cad($email);
+			echo "
+			<script>
+			alert('Dados confirmados com sucesso!');
+			window.location.href='".base_url()."restrict';
+			</script>";
+		}
+
+		//$this->template->show("restrict.php");	
+	}
+
+	public function ajax_forgot_password() {
+
+		if (!$this->input->is_ajax_request()) {
+			exit("Nenhum acesso de script direto permitido!");
+		}
+
+		$json = array();
+		$json["status"] = 1;
+		$json["error_list"] = array();
+		$json["confirmation"] = array();
+
+		$this->load->model("users_model");
+
+		$data = $this->input->post();
+
+		if (empty($data["email_user_forgot"])){
+			$json["error_list"]["#email_user_forgot"] = "O e-mail é obrigatório!";
+		} else {
+			if (!$this->users_model->is_duplicated("email_user", $data["email_user_forgot"])){
+				$json["error_list"]["#email_user_forgot"] = "E-mail não cadastrado!";
+			} else {
+				if ($data["email_user_forgot"] != $data["email_user_forgot_confirm"]) {
+					$json["error_list"]["#email_user_forgot"] = "";
+					$json["error_list"]["#email_user_forgot_confirm"] = "E-mails não conferem!";
+				} else {
+					$json["confirmation"]["email_user"] = $data["email_user_forgot"];
+					unset($data["email_user_forgot_confirm"]);
+
+					$recaptchaResponse = trim($this->input->post('g-recaptcha-response'));
+					$userIp=$this->input->ip_address();    
+        			$secret = $this->config->item('SECRET_KEY');
+				    $url="https://www.google.com/recaptcha/api/siteverify?secret=".$secret."&response=".$recaptchaResponse."&remoteip=".$userIp;
+
+				    $ch = curl_init();
+				    curl_setopt($ch, CURLOPT_URL, $url); 
+			        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+			        $output = curl_exec($ch); 
+			        curl_close($ch);      
+			         
+			        $status= json_decode($output, true);
+			        if (!$status['success']) {
+            			$json["error_list"]["#btn_forgot_password"] = "Captcha inválido! Atualize a página e tente novamente.";
+			        }
+				   
+						
+				}
+			}
+			
+		} 
+
+		if(!empty($json["error_list"])){
+			$json["status"] = 0;
+		} else {			
+			$json["confirmation"]["token"] = bin2hex(random_bytes(64));
+			date_default_timezone_set('America/Sao_Paulo');
+			$json["confirmation"]["expire_date"] = date('Y-m-d H:i:s', strtotime('+1 day'));
+			$this->users_model->insert("confirmation", $json["confirmation"]);			
+		}
+		echo json_encode($json);
+	}
+
+	public function send_new_password_email() {
+		$this->load->library('email');
+
+		$to = $this->input->post("email");
+		$token = $this->input->post("token");
+        $from = $this->config->item('EMAIL_COMPANY');
+		      
+        $this->email->set_mailtype("html");
+		$this->email->from($from);
+		$this->email->subject("Redefinição de senha!");
+		$this->email->to($to);
+		$this->email->message("<strong>Cadastro de nova senha</strong><br>
+Recebemos uma tentativa de redefinição de senha para este e-mail. Caso não tenha sido você, desconsidere este e-mail, caso contrário, cadastre sua nova senha <div id='btn_new_password'><a href= ".base_url() . 'password/index/' . $to. '/' . $token. " >clicando aqui!</a>");
+
+		$this->email->send();
+		//$this->email->print_debugger();
+
+	}
+
+	//Função criada para confirmar o cadastro de nova senha
+	public function ajax_confirm_new_password() {
+
+		/*if (!$this->input->is_ajax_request()) {
+			exit("Nenhum acesso de script direto permitido!");
+		}*/
+
+		$json = array();
+		$json["status"] = 1;
+		$json["error_list"] = array();
+		$json["confirmation"] = array();
+
+		$this->load->model("users_model");
+
+		/*$email = $this->uri->segment(3);
+		$token = $this->uri->segment(4);*/
+
+		$json["confirmation"]["email_user"] = $this->uri->segment(3);
+		$json["confirmation"]["token"] = $this->uri->segment(4);
+		
+		echo "		
+		<script>
+		window.location.href='".base_url()."restrict';
+		$(document).ready(function() {
+    		$('#modal_password').modal('show');
+		});
+		</script>";
+		/*if($this->users_model->confirmation_cad($email, $token)) {
+			echo "
+			<script>
+			window.location.href='".base_url()."restrict';
+			function getNewPassword() {
+				$('#form_password')[0].reset();
+				$('#modal_password').modal();
+				$('#email_user_confirm').val(".$email.");
+			} getNewPassword();			
+			</script>";
+			//document.getElementById('email_user_confirm').value = $email;			  
+			} else {
+			echo "
+			<script>
+			alert('Não foi possível confirmar seus dados!');
+			window.location.href='".base_url()."restrict';
+			</script>";
+		}*/
+		//echo json_encode($json);	
 	}
 
 	//Função criada para editar anúncio
@@ -369,14 +645,16 @@ class Restrict extends CI_Controller{
 		$json["input"]["zip_code"] = $data["zip_code"];
 		$json["input"]["state"] = $data["state"];
 		$json["input"]["city"] = $data["city"];
+		$json["input"]["phone"] = $data["phone"];
 		$json["input"]["advert_description"] = $data["advert_description"];
 
-		$temp_advert_img_path = explode(',', $data["advert_img"]);
-		$json["img"]["advert_img_path"] = '';
-		for ($i=0; $i < count($temp_advert_img_path); $i++) { 
-			$json["img"]["advert_img_path"] .= '<li><img src=" '.base_url() . $temp_advert_img_path[$i].'" class="img-responsive img-thumbnail" style="max-width: 100px; max-height: 100px;" /></li>';
+		$temp_advert_img_view = explode(',', $data["advert_img"]);
+		//$json["img"]["advert_img_view_thumb"] = '';
+		//$json["img"]["img_path_temp"] = '';
+		for ($i=0; $i < count($temp_advert_img_view); $i++) { 
+			/*$json["img"]["advert_img_view_thumb"] .= '<li><img src=" '.base_url() . $temp_advert_img_view[$i].'" class="img-responsive img-thumbnail" style="max-width: 100px; max-height: 100px;" /></li>';*/
+			$json["img"]["img_path_temp"][$i] = base_url() . $temp_advert_img_view[$i];
 		}
-
 		echo json_encode($json);
 	}
 
@@ -420,7 +698,36 @@ class Restrict extends CI_Controller{
 		echo json_encode($json);
 	}
 
-	public function ajax_exclude_advert_data() {
+	public function send_delete_advert_email() {
+		$this->load->library('email');
+
+		$this->load->model("users_model");
+		$id_user = $this->session->userdata("id_user");
+		$data = $this->users_model->get_data($id_user)->result_array()[0];
+		$to = $data["email_user"];
+
+		$this->load->model("adverts_model");
+		$id_advert = $this->input->post("id_advert");
+		$data = $this->adverts_model->get_data($id_advert)->result_array()[0];
+		$title = $data["advert_title"];
+
+		$from = $this->config->item('EMAIL_COMPANY');
+		      
+        $this->email->set_mailtype("html");
+		$this->email->from($from);
+		$this->email->subject("Anúncio excluído!");
+		$this->email->to($to);
+		$this->email->message("Seu anúncio $title foi excluído conforme solicitado.
+Ele poderá ser excluído definitivamente de nossa base de dados a qualquer momento.
+Enquanto isso não acontece, você poderá restaurá-lo.
+Acompanhe o status do seu anúncio fazendo login!
+Obrigado por anunciar conosco!");
+		$this->email->send();
+		//$this->email->print_debugger();
+
+	}
+
+	public function ajax_approve_advert_data() {
 
 		if (!$this->input->is_ajax_request()) {
 			exit("Nenhum acesso de script direto permitido!");
@@ -431,9 +738,128 @@ class Restrict extends CI_Controller{
 
 		$this->load->model("adverts_model");
 		$id_advert = $this->input->post("id_advert");
+		$this->adverts_model->update_approve($id_advert);
+
+		echo json_encode($json);
+	}
+
+	public function send_approve_advert_email() {
+		$this->load->library('email');
+		$this->load->model("adverts_model");
+		$this->load->model("users_model");
+
+		$id_advert = $this->input->post("id_advert");
+		$data_advert = $this->adverts_model->get_data($id_advert)->result_array()[0];
+		$title = $data_advert["advert_title"];
+		$id_user = $data_advert["id_user_fk"];		
+		$data_user = $this->users_model->get_data($id_user)->result_array()[0];
+		$to = $data_user["email_user"];
+		$from = $this->config->item('EMAIL_COMPANY');
+		      
+        $this->email->set_mailtype("html");
+		$this->email->from($from);
+		$this->email->subject("Anúncio aprovado!");
+		$this->email->to($to);
+		$this->email->message("Seu anúncio $title foi aprovado e já está disponível para visualização.
+			");
+		$this->email->send();
+		//$this->email->print_debugger();
+
+	}
+
+	public function ajax_disapproved_advert_data() {
+		if (!$this->input->is_ajax_request()) {
+			exit("Nenhum acesso de script direto permitido!");
+		}
+
+		$json = array();
+		$json["status"] = 1;		
+
+		$this->load->model("adverts_model");
+		$this->load->model("users_model");
+
+		$id_advert = $this->input->post("id_advert");
+		$data_advert = $this->adverts_model->get_data($id_advert)->result_array()[0];
+		$json["title"] = $data_advert["advert_title"];
+		$id_user = $data_advert["id_user_fk"];		
+		$data_user = $this->users_model->get_data($id_user)->result_array()[0];
+		$json["to"] = $data_user["email_user"];
+		$this->adverts_model->delete($id_advert);		
+
+		echo json_encode($json);
+	}
+
+	public function send_disapproved_advert_email() {
+		if (!$this->input->is_ajax_request()) {
+			exit("Nenhum acesso de script direto permitido!");
+		}
+
+		$json = array();
+		$json["status"] = 1;
+
+		$this->load->library('email');
+
+		$title = $this->input->post("title");
+		$to = $this->input->post("to");
+		$from = $this->config->item('EMAIL_COMPANY');
+		
+		$this->email->set_mailtype("html");
+		$this->email->from($from);
+		$this->email->subject("Anúncio reprovado!");
+		$this->email->to($to);
+		$this->email->message("Seu anúncio $title foi reprovado por ir contra nossos Termos de Uso.
+			Verifique nossos Termos de Uso em nosso <a href= ".base_url() . "restrict>site</a> e anuncie novamente!");
+		$this->email->send();
+		$this->email->clear();
+		//$this->email->print_debugger();
+
+	}
+
+	public function ajax_exclude_advert_data() {
+		if (!$this->input->is_ajax_request()) {
+			exit("Nenhum acesso de script direto permitido!");
+		}
+
+		$json = array();
+		$json["status"] = 1;
+
+		$this->load->model("adverts_model");
+		$this->load->model("users_model");
+
+		$id_advert = $this->input->post("id_advert");
+		$data_advert = $this->adverts_model->get_data($id_advert)->result_array()[0];
+		$json["title"] = $data_advert["advert_title"];		
+		$id_user = $data_advert["id_user_fk"];		
+		$data_user = $this->users_model->get_data($id_user)->result_array()[0];
+		$json["to"] = $data_user["email_user"];
 		$this->adverts_model->delete($id_advert);
 
 		echo json_encode($json);
+	}
+
+	public function send_exclude_advert_email() {
+		if (!$this->input->is_ajax_request()) {
+			exit("Nenhum acesso de script direto permitido!");
+		}
+
+		$json = array();
+		$json["status"] = 1;
+
+		$this->load->library('email');
+
+		$title = $this->input->post("title");
+		$to = $this->input->post("to");
+		$from = $this->config->item('EMAIL_COMPANY');
+		      
+        $this->email->set_mailtype("html");
+		$this->email->from($from);
+		$this->email->subject("Anúncio excluído definitivamente!");
+		$this->email->to($to);
+		$this->email->message("Seu anúncio $title foi excluído definitivamente da nossa base de dados.
+Obrigado por anunciar conosco!");
+		$this->email->send();
+		$this->email->clear();
+		//$this->email->print_debugger();
 	}
 
 	public function ajax_recycle_advert_data() {
@@ -452,6 +878,30 @@ class Restrict extends CI_Controller{
 		echo json_encode($json);
 	}
 
+	public function send_recycle_advert_email() {
+		$this->load->library('email');
+		$this->load->model("users_model");
+		$this->load->model("adverts_model");
+
+		$id_advert = $this->input->post("id_advert");
+		$data_advert = $this->adverts_model->get_data($id_advert)->result_array()[0];
+		$title = $data_advert["advert_title"];
+
+		$id_user = $this->session->userdata("id_user");
+		$data_user = $this->users_model->get_data($id_user)->result_array()[0];
+		$to = $data_user["email_user"];
+		$from = $this->config->item('EMAIL_COMPANY');
+		      
+        $this->email->set_mailtype("html");
+		$this->email->from($from);
+		$this->email->subject("Anúncio restaurado!");
+		$this->email->to($to);
+		$this->email->message("Seu anúncio $title foi restaurado e já está disponível para visualização.
+Obrigado por anunciar conosco!");
+		$this->email->send();
+		//$this->email->print_debugger();
+
+	}
 
 	public function ajax_approve_all_advert_data() {
 
@@ -461,8 +911,11 @@ class Restrict extends CI_Controller{
 
 		$json = array();
 		$json["status"] = 1;
+		$json["titles"] = array();
+		$json["tos"] = array();
 
 		$this->load->model("adverts_model");
+		$this->load->model("users_model");
 
 		if ($this->session->userdata("id_user")) {
 			$array_id_user = array("id_user" => $this->session->userdata("id_user"));
@@ -475,8 +928,40 @@ class Restrict extends CI_Controller{
 		foreach ($adverts as $advert) {
 			$id_advert = $advert->id_advert;
 			$this->adverts_model->update_approve($id_advert);
+			$data_advert = $this->adverts_model->get_data($id_advert)->result_array()[0];
+			$title = $data_advert["advert_title"];			
+			$id_user = $data_advert["id_user_fk"];			
+			$data_user = $this->users_model->get_data($id_user)->result_array()[0];
+			$to = $data_user["email_user"];
+			array_push($json["titles"], $title);
+			array_push($json["tos"], $to);
+		}
+		echo json_encode($json);
+	}
+
+	public function send_approve_all_advert_email() {
+		if (!$this->input->is_ajax_request()) {
+			exit("Nenhum acesso de script direto permitido!");
 		}
 
+		$json = array();
+		$json["status"] = 1;
+
+		$this->load->library('email');
+
+		$titles = $this->input->post("titles");
+		$tos = $this->input->post("tos");
+		$from = $this->config->item('EMAIL_COMPANY');
+
+		foreach(array_combine(explode(",", $titles), explode(",", $tos)) as $title => $to) {	      
+			$this->email->from($from);		
+			$this->email->subject("Anúncio aprovado!");
+			$this->email->to($to);
+			$this->email->message("Seu anúncio $title foi aprovado e já está disponível para visualização.");
+			$this->email->send();
+			$this->email->clear();
+			//$this->email->print_debugger();
+		}
 		echo json_encode($json);
 	}
 
@@ -488,8 +973,11 @@ class Restrict extends CI_Controller{
 
 		$json = array();
 		$json["status"] = 1;
+		$json["titles"] = array();
+		$json["tos"] = array();
 
 		$this->load->model("adverts_model");
+		$this->load->model("users_model");
 
 		if ($this->session->userdata("id_user")) {
 			$array_id_user = array("id_user" => $this->session->userdata("id_user"));
@@ -501,14 +989,21 @@ class Restrict extends CI_Controller{
 
 		foreach ($adverts as $advert) {
 			$id_advert = $advert->id_advert;
-			$this->adverts_model->delete($id_advert);
-		}
 
+			$data_advert = $this->adverts_model->get_data($id_advert)->result_array()[0];
+			$title = $data_advert["advert_title"];
+			$id_user = $data_advert["id_user_fk"];
+			$data_user = $this->users_model->get_data($id_user)->result_array()[0];
+			$to = $data_user["email_user"];
+			$this->adverts_model->delete($id_advert);
+			array_push($json["titles"], $title);
+			array_push($json["tos"], $to);
+
+		}
 		echo json_encode($json);
 	}
 
-	public function ajax_delete_user_data() {
-
+	public function send_exclude_all_advert_email() {
 		if (!$this->input->is_ajax_request()) {
 			exit("Nenhum acesso de script direto permitido!");
 		}
@@ -516,10 +1011,22 @@ class Restrict extends CI_Controller{
 		$json = array();
 		$json["status"] = 1;
 
-		$this->load->model("users_model");
-		$id_user = $this->input->post("id_user");
-		$this->users_model->delete($id_user);
+		$this->load->library('email');
 
+		$titles = $this->input->post("titles");
+		$tos = $this->input->post("tos");
+		$from = $this->config->item('EMAIL_COMPANY');
+
+		foreach(array_combine(explode(",", $titles), explode(",", $tos)) as $title => $to) {	
+			$this->email->from($from);
+			$this->email->subject("Anúncio excluído definitivamente!");
+			$this->email->to($to);
+			$this->email->message("Seu anúncio $title foi excluído definitivamente da nossa base de dados.
+Obrigado por anunciar conosco!");
+			$this->email->send();
+			$this->email->clear();
+			//$this->email->print_debugger();
+		}
 		echo json_encode($json);
 	}
 
@@ -530,6 +1037,7 @@ class Restrict extends CI_Controller{
 		}
 
 		$this->load->model("adverts_model");
+		$this->load->model("users_model");
 		//Adaptação para mostrar o datatable conforme usuário adm ou geral com status e excluídos
 		if ($this->session->userdata("id_user")) {
 			$array_id_user = array("id_user" => $this->session->userdata("id_user"));
@@ -556,6 +1064,12 @@ class Restrict extends CI_Controller{
 			$row[] = date('d/m/Y H:i', strtotime($advert_datetime_formated));
 
 			$row[] = $advert->advert_count;
+
+			if ($id_user == 1) {
+				$id_user_advert = $advert->id_user_fk;
+					$user_name = $this->users_model->get_data($id_user_advert, "login_user")->result_array()[0];			
+				$row[] = $user_name["login_user"];
+			}
 
 			$row[] = '<div style="display: inline-block;">
 						<button class="btn btn-warning btn-edit-advert" 
@@ -589,6 +1103,7 @@ class Restrict extends CI_Controller{
 		}
 
 		$this->load->model("adverts_model");
+		$this->load->model("users_model");
 
 		if ($this->session->userdata("id_user")) {
 			$array_id_user = array("id_user" => $this->session->userdata("id_user"));
@@ -615,6 +1130,10 @@ class Restrict extends CI_Controller{
 			$row[] = date('d/m/Y H:i', strtotime($advert_datetime_formated));
 
 			if ($id_user == 1) {
+				$id_user_advert = $advert->id_user_fk;
+				$user_name = $this->users_model->get_data($id_user_advert, "login_user")->result_array()[0];			
+				$row[] = $user_name["login_user"];
+
 				$row[] = '<div style="display: inline-block;">
 						<button class="btn btn-primary btn-approve-new-advert" 
 							id_advert="'.$advert->id_advert.'">
@@ -665,6 +1184,7 @@ class Restrict extends CI_Controller{
 		}
 
 		$this->load->model("adverts_model");
+		$this->load->model("users_model");
 
 		if ($this->session->userdata("id_user")) {
 			$array_id_user = array("id_user" => $this->session->userdata("id_user"));
@@ -672,6 +1192,7 @@ class Restrict extends CI_Controller{
 			unset($array_id_user["id_user"]);
 
 			$adverts = $this->adverts_model->get_datatable_deleted($id_user);
+			
 		}
 
 		$data = array();
@@ -699,15 +1220,15 @@ class Restrict extends CI_Controller{
 				}
 
 				$row[] = $advert->advert_count;
+
+				$id_user_advert = $advert->id_user_fk;
+				$user_name = $this->users_model->get_data($id_user_advert, "login_user")->result_array()[0];			
+				$row[] = $user_name["login_user"];
 			
 				$row[] = '<div style="display: inline-block;">
 						<button class="btn btn-success btn-recycle-advert" 
 							id_advert="'.$advert->id_advert.'">
 							<i class="icon-recycle"></i>
-						</button>
-						<button class="btn btn-warning btn-edit-deleted-advert" 
-							id_advert="'.$advert->id_advert.'">
-							<i class="icon-edit"></i>
 						</button>
 						<button class="btn btn-danger btn-exclude-advert" 
 							id_advert="'.$advert->id_advert.'">
@@ -757,8 +1278,23 @@ class Restrict extends CI_Controller{
 			$user_date_formated = $user->register_date;
 			$row[] = date('d/m/Y', strtotime($user_date_formated));
 
+			$temp_status = $user->status;
+			switch ($temp_status) {
+			  case 0:
+			    $row[] = "Em confirmação";
+			    break;
+			  case 1:
+			    $row[] = "Ativo";
+			    break;
+			  case 2:
+			    $row[] = "Banido";
+			    break;
+			  default:
+			    $row[] = "Null";
+			}
+
 			$row[] = '<div style="display: inline-block;">
-						<button class="btn btn-primary btn-edit-user" 
+						<button class="btn btn-warning btn-edit-user" 
 							id_user="'.$user->id_user.'">
 							<i class="icon-edit"></i>
 						</button>
@@ -769,7 +1305,6 @@ class Restrict extends CI_Controller{
 					</div>';
 
 			$data[] = $row;
-
 		}
 
 		$json = array(
@@ -781,5 +1316,27 @@ class Restrict extends CI_Controller{
 
 		echo json_encode($json);
 	}
+
+	public function ajax_delete_user_data() {
+
+		if (!$this->input->is_ajax_request()) {
+			exit("Nenhum acesso de script direto permitido!");
+		}
+
+		$json = array();
+		$json["status"] = 1;
+
+		$this->load->model("users_model");
+		$id_user = $this->input->post("id_user");
+		$data = $this->users_model->get_data($id_user, "status")->result_array()[0];
+		if ($data["status"] == 1) {
+			$this->load->model("adverts_model");
+			$this->adverts_model->update_delete_ban($id_user);
+		}
+		$this->users_model->delete($id_user, $data["status"]);
+
+		echo json_encode($json);
+	}
+
 
 }
