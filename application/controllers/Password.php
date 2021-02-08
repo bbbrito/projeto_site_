@@ -42,20 +42,16 @@ class Password extends CI_Controller {
 			unset($data["email_new_password"]);
 			if (!$this->users_model->is_duplicated("email_user", $data["email_user"])){
 				$json["error_list"]["#email_new_password"] = "E-mail não cadastrado!";
-			} else {
-				if ($this->users_model->expire_link($data["email_user"], $now_date) || !$this->users_model->confirmation_cad($data["email_user"], $data["token_new_password"])) {
+			} else if ($this->users_model->expire_link($data["email_user"], $now_date) || !$this->users_model->confirmation_cad($data["email_user"], $data["token_new_password"])) {
 					$json["status"] = 2;
-				}
 			}
 		}
 
 		if (empty($data["new_password_user"])){
 			$json["error_list"]["#new_password_user"] = "A senha é obrigatória!";
-		} else {
-			if ($data["new_password_user"] != $data["new_password_user_confirm"]) {
-				$json["error_list"]["#new_password_user"] = "";
-				$json["error_list"]["#new_password_user_confirm"] = "Senhas não conferem!";
-			}
+		} else if($data["new_password_user"] != $data["new_password_user_confirm"]){
+			$json["error_list"]["#new_password_user"] = "";
+			$json["error_list"]["#new_password_user_confirm"] = "Senhas não conferem!";
 		}
 
 		if(!empty($json["error_list"])){
